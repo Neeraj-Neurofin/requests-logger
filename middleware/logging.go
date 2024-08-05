@@ -10,14 +10,10 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	logTypeEnum "github.com/Neeraj-Neurofin/requests-logger/store/enum"
+	"github.com/Neeraj-Neurofin/requests-logger/store/types"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
-
-type PostLogInput struct {
-	Type      string                 `json:"type"`
-	Data      map[string]interface{} `json:"data"`
-	TraceId   string                 `json:"traceId"`
-	Timestamp time.Time              `json:"timestamp"`
-}
 
 type CustomResponseWriter struct {
 	http.ResponseWriter
@@ -52,7 +48,7 @@ func LoggingMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 		end := time.Now()
 
 		responseBody := crw.body.Bytes()
-		logResponse(res, responseBody, start, end)
+		logResponse(res, responseBody, crw.Header(), start, end)
 
 		return err
 	}
@@ -67,36 +63,39 @@ func logRequest(req *http.Request, requestBody []byte, start time.Time) {
 		"startTime":      start,
 	}
 
-	logInput := PostLogInput{
-		Type:      "API",
+	traceID := primitive.NewObjectID().Hex()
+	logInput := loggerTypes.PostLogInput{
+		Type:      logTypeEnum.API,
 		Data:      logData,
-		TraceId:   "12345",
+		TraceId:   traceID,
 		Timestamp: time.Now(),
 	}
 
 	postLog(logInput)
 }
 
-func logResponse(res *echo.Response, responseBody []byte, start, end time.Time) {
+func logResponse(res *echo.Response, responseBody []byte, responseHeaders http.Header,start, end time.Time) {
 	logData := map[string]interface{}{
-		"responseStatus": res.Status,
-		"responseBody":   string(responseBody),
-		"startTime":      start,
-		"endTime":        end,
-		"duration":       end.Sub(start).String(),
+		"responseStatus":  res.Status,
+		"responseHeaders": responseHeaders,
+		"responseBody":    string(responseBody),
+		"startTime":       start,
+		"endTime":         end,
+		"duration":        end.Sub(start).String(),
 	}
 
-	logInput := PostLogInput{
-		Type:      "API",
+	traceID := primitive.NewObjectID().Hex()
+	logInput := loggerTypes.PostLogInput{
+		Type:      logTypeEnum.API,
 		Data:      logData,
-		TraceId:   "12345",
+		TraceId:   traceID,
 		Timestamp: time.Now(),
 	}
 
 	postLog(logInput)
 }
 
-func postLog(logInput PostLogInput) {
+func postLog(logInput loggerTypes.PostLogInput) {
 	logInputJSON, err := json.Marshal(logInput)
 	if err != nil {
 		log.Printf("Error marshaling log data: %v", err)
