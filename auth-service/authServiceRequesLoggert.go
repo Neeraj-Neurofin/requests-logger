@@ -1,21 +1,29 @@
 package logger
 
 import (
-	"bytes"
-	"encoding/json"
-	"io"
-	"log"
-	"net/http"
-	"os"
-	"time"
+    "bytes"
+    "encoding/json"
+    "io"
+    "log"
+    "net/http"
+    "os"
+    "time"
 
-	"github.com/Neeraj-Neurofin/requests-logger/store/enum"
-	"github.com/Neeraj-Neurofin/requests-logger/store/types"
+    "github.com/Neeraj-Neurofin/requests-logger/store/enum"
+    "github.com/Neeraj-Neurofin/requests-logger/store/types"
 )
 
 func LogAuthServiceRequest(req *http.Request, traceID string) {
-    requestBody, _ := io.ReadAll(req.Body)
-    req.Body = io.NopCloser(bytes.NewBuffer(requestBody))
+    var requestBody []byte
+    if req.Body != nil {
+        var err error
+        requestBody, err = io.ReadAll(req.Body)
+        if err != nil {
+            log.Printf("Error reading request body: %v", err)
+            return
+        }
+        req.Body = io.NopCloser(bytes.NewBuffer(requestBody))
+    }
 
     logData := map[string]interface{}{
         "method":         req.Method,
@@ -37,11 +45,16 @@ func LogAuthServiceRequest(req *http.Request, traceID string) {
 }
 
 func LogAuthServiceResponse(res *http.Response, traceID string) {
-    responseBodyInBytes, _ := io.ReadAll(res.Body)
-    res.Body = io.NopCloser(bytes.NewBuffer(responseBodyInBytes))
-
-    responseBody := loggerTypes.ResponseBody{}
-    json.Unmarshal(responseBodyInBytes, &responseBody)
+    var responseBodyInBytes []byte
+    if res.Body != nil {
+        var err error
+        responseBodyInBytes, err = io.ReadAll(res.Body)
+        if err != nil {
+            log.Printf("Error reading response body: %v", err)
+            return
+        }
+        res.Body = io.NopCloser(bytes.NewBuffer(responseBodyInBytes))
+    }
 
     logData := map[string]interface{}{
         "responseStatus":  res.StatusCode,
@@ -100,4 +113,3 @@ func postLog(logInput loggerTypes.PostLogInput) {
         }
     }()
 }
-
