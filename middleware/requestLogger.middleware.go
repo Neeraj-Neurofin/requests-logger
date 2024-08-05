@@ -31,13 +31,20 @@ func LoggingMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 		req := c.Request()
 		res := c.Response()
 
+		// Generate a traceID for the entire request-response cycle
+		traceID, ok := c.Get("traceID").(string)
+		if !ok {
+			traceID = primitive.NewObjectID().Hex()
+			c.Set("traceID", traceID)
+		}
+
 		var requestBody []byte
 		if req.Body != nil {
 			requestBody, _ = io.ReadAll(req.Body)
 			req.Body = io.NopCloser(bytes.NewBuffer(requestBody))
 		}
 
-		logRequest(req, requestBody, start)
+		logRequest(req, requestBody, start, traceID)
 
 		resBody := new(bytes.Buffer)
 		crw := &CustomResponseWriter{ResponseWriter: res.Writer, body: resBody}
@@ -48,13 +55,13 @@ func LoggingMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 		end := time.Now()
 
 		responseBody := crw.body.Bytes()
-		logResponse(res, responseBody, crw.Header(), start, end)
+		logResponse(res, responseBody, crw.Header(), start, end, traceID)
 
 		return err
 	}
 }
 
-func logRequest(req *http.Request, requestBody []byte, start time.Time) {
+func logRequest(req *http.Request, requestBody []byte, start time.Time, traceID string) {
 	logData := map[string]interface{}{
 		"method":         req.Method,
 		"url":            req.URL.String(),
@@ -63,7 +70,6 @@ func logRequest(req *http.Request, requestBody []byte, start time.Time) {
 		"startTime":      start,
 	}
 
-	traceID := primitive.NewObjectID().Hex()
 	logInput := loggerTypes.PostLogInput{
 		Type:      logTypeEnum.API,
 		Data:      logData,
@@ -74,7 +80,7 @@ func logRequest(req *http.Request, requestBody []byte, start time.Time) {
 	postLog(logInput)
 }
 
-func logResponse(res *echo.Response, responseBody []byte, responseHeaders http.Header,start, end time.Time) {
+func logResponse(res *echo.Response, responseBody []byte, responseHeaders http.Header, start, end time.Time, traceID string) {
 	logData := map[string]interface{}{
 		"responseStatus":  res.Status,
 		"responseHeaders": responseHeaders,
@@ -84,7 +90,6 @@ func logResponse(res *echo.Response, responseBody []byte, responseHeaders http.H
 		"duration":        end.Sub(start).String(),
 	}
 
-	traceID := primitive.NewObjectID().Hex()
 	logInput := loggerTypes.PostLogInput{
 		Type:      logTypeEnum.API,
 		Data:      logData,
@@ -102,7 +107,7 @@ func postLog(logInput loggerTypes.PostLogInput) {
 		return
 	}
 
-	logServiceURL := "http://localhost:" + os.Getenv("LOGGER_PORT") + "/log"
+	logServiceURL := os.Getenv("LOG_SERVICE_URL")
 	go func() {
 		resp, err := http.Post(logServiceURL, "application/json", bytes.NewBuffer(logInputJSON))
 		if err != nil {
