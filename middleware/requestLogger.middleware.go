@@ -34,7 +34,7 @@ func LoggingMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 		// Generate a traceID for the entire request-response cycle
 		traceID, ok := c.Get("traceID").(string)
 		if !ok {
-			traceID := uuid.New().String() // Generate a new UUID for the traceID
+			traceID = uuid.New().String() // Generate a new UUID for the traceID
 			c.Set("traceID", traceID)
 		}
 
