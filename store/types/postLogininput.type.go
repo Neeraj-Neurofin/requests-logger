@@ -1,7 +1,6 @@
 package loggerTypes
 
 import (
-	"errors"
 	"time"
 
 	logTypeEnum "github.com/Neeraj-Neurofin/requests-logger/store/enum"
@@ -19,9 +18,9 @@ func (i *PostLogInput) Validate() error {
 		return err
 	}
 
-	if i.TraceId == "" {
-		return errors.New("trace id not found")
-	}
+	// if i.TraceId == "" {
+	// 	return errors.New("trace id not found")
+	// }
 
 	return nil
 }
