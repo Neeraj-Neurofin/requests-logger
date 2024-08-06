@@ -12,7 +12,7 @@ import (
 	"github.com/labstack/echo/v4"
 	logTypeEnum "github.com/Neeraj-Neurofin/requests-logger/store/enum"
 	"github.com/Neeraj-Neurofin/requests-logger/store/types"
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"github.com/google/uuid"
 )
 
 type CustomResponseWriter struct {
@@ -34,7 +34,7 @@ func LoggingMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 		// Generate a traceID for the entire request-response cycle
 		traceID, ok := c.Get("traceID").(string)
 		if !ok {
-			traceID = primitive.NewObjectID().Hex()
+			traceID := uuid.New().String() // Generate a new UUID for the traceID
 			c.Set("traceID", traceID)
 		}
 

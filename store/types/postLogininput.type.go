@@ -1,8 +1,10 @@
 package loggerTypes
 
 import (
-	logTypeEnum "github.com/Neeraj-Neurofin/requests-logger/store/enum"
+	"errors"
 	"time"
+
+	logTypeEnum "github.com/Neeraj-Neurofin/requests-logger/store/enum"
 )
 
 type PostLogInput struct {
@@ -10,4 +12,16 @@ type PostLogInput struct {
 	Data map[string]interface{} `json:"data"`
 	TraceId string 				`json:"traceId"`
 	Timestamp time.Time 		`json:"timestamp"`
+}
+
+func (i *PostLogInput) Validate() error {
+	if err := i.Type.Validate(); err != nil {
+		return err
+	}
+
+	if i.TraceId == "" {
+		return errors.New("trace id not found")
+	}
+
+	return nil
 }
